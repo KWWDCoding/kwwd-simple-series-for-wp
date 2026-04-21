@@ -1,0 +1,85 @@
+CHANGELOG
+=========
+
+v1.4.0 (Latest)
+---------------
+Added: Padding setting (0-40px) for series container
+- Available in default settings and individual series override
+- Controls internal spacing of series box
+
+Added: List styling options for post links
+- Options: None, Decimal (1.2.3), Decimal-leading-zero (01.02.03),
+  Lower-alpha (a.b.c), Upper-alpha (A.B.C), Lower-roman (i.ii.iii),
+  Upper-roman (I.II.III), Lower-greek (alpha,beta,gamma), Disc, Circle, Square
+- Available in default settings and individual series override
+
+Added: Border radius setting (0-10px)
+- Available in default settings and individual series override
+
+Added: Search/filter functionality on series edit page
+- Type to filter posts in dropdown before adding
+- Replaced simple dropdown with searchable input
+
+Fixed: Gap between description and list
+- Reduced margins/padding for cleaner appearance
+
+Removed: Bar/divider line and bar color setting
+- Removed distracting line under description
+- Removed related settings from admin UI
+
+Fixed: CSS duplication optimization
+- Base CSS output once per page using custom properties
+- Each series gets scoped unique values via inline styles
+- Significantly reduces page weight when multiple series displayed
+
+
+v1.3.0
+-------
+Added: Dedicated series description field
+- Removed post content editor from Series CPT
+- Added separate description meta box
+- More appropriate for series meta content
+
+Added: Posts can belong to multiple series
+- Changed from single series assignment to multiple
+- Uses _kwwd_post_series_ids meta (array)
+- Post edit screen now shows checkboxes instead of dropdown
+- Series edit page shows which posts already in series
+
+Added: Post count badge on admin list
+- Green badge shows number of posts in series
+- Shows "0 posts" in gray when empty
+
+
+v1.2.0
+------
+Fixed: Collapsed default setting ignored
+- Fixed logic to check override before using stored collapsed meta
+- Existing series now properly fall back to default when override is off
+
+Fixed: Duplicate "else" syntax error
+- Fixed parse error on line 225 caused by invalid if/else structure
+
+
+v1.1.0
+------
+Added: Shortcode display with click-to-copy
+- Shows on series list and individual series pages
+- Visual feedback when copied
+
+Added: Edit/Delete buttons on All Series list
+- Quick actions from main series admin page
+
+
+v1.0.0 (Initial Release)
+----------------------
+Core functionality:
+- Series custom post type
+- Post/page assignment meta box
+- Frontend display with customizable styling
+- Drag-to-order functionality
+- Collapsible series display
+- Default settings page
+- Override checkbox per-series
+- Auto-display on frontend
+- Shortcode support [simple_series id=X]

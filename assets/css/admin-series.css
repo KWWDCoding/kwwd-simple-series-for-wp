@@ -1,0 +1,228 @@
+/**
+ * KWWD Article Series - Admin Styles
+ */
+.kwwd-series-admin {
+    display: flex;
+    gap: 20px;
+    margin-top: 10px;
+}
+
+.kwwd-series-available,
+.kwwd-series-selected {
+    flex: 1;
+    min-width: 0;
+}
+
+.kwwd-series-available h4,
+.kwwd-series-selected h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1d2327;
+}
+
+.kwwd-series-available-list {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #c2c5ca;
+    background: #fff;
+    border-radius: 4px;
+}
+
+.kwwd-series-post-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-bottom: 1px solid #e5e5e5;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.kwwd-series-post-item:last-child {
+    border-bottom: none;
+}
+
+.kwwd-series-post-item:hover {
+    background: #f0f0f1;
+}
+
+.kwwd-series-post-item .dashicons {
+    color: #787c82;
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.kwwd-series-post-item .title {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.kwwd-series-post-item .type {
+    font-size: 11px;
+    color: #646970;
+    text-transform: capitalize;
+    background: #e5e5e5;
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+
+.kwwd-series-post-item .remove {
+    cursor: pointer;
+    color: #dc3545 !important;
+    opacity: 0.6;
+    transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.kwwd-series-post-item .remove:hover {
+    opacity: 1;
+    color: #a00 !important;
+}
+
+.kwwd-series-posts-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border: 1px solid #c2c5ca;
+    min-height: 50px;
+    background: #fff;
+    border-radius: 4px;
+}
+
+.kwwd-series-posts-list .kwwd-series-post-item {
+    background: #fff;
+    cursor: grab;
+}
+
+.kwwd-series-posts-list .kwwd-series-post-item:active {
+    cursor: grabbing;
+}
+
+.kwwd-series-posts-list .kwwd-series-post-item.ui-sortable-helper {
+    background: #fff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.kwwd-series-posts-list .kwwd-series-post-item.ui-sortable-placeholder {
+    background: #f0f0f1;
+    visibility: visible !important;
+}
+
+.kwwd-series-search {
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 6px 10px;
+    border: 1px solid #c2c5ca;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.kwwd-series-search:focus {
+    border-color: #2271b1;
+    box-shadow: 0 0 0 1px #2271b1;
+    outline: none;
+}
+
+.kwwd-series-settings-box {
+    margin-top: 10px;
+}
+
+.kwwd-series-settings-box p {
+    margin: 12px 0;
+}
+
+.kwwd-series-settings-box label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 4px;
+    font-size: 12px;
+    color: #1d2327;
+}
+
+.kwwd-series-settings-box input[type="number"],
+.kwwd-series-settings-box input[type="color"] {
+    vertical-align: middle;
+}
+
+.kwwd-series-settings-box select {
+    width: 100%;
+    margin-top: 4px;
+}
+
+.description {
+    color: #646970;
+    font-size: 12px;
+    font-style: italic;
+    margin-top: 8px;
+}
+
+.kwwd-series-list-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.kwwd-series-list-table th,
+.kwwd-series-list-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+.kwwd-series-list-table th {
+    font-weight: 600;
+    color: #1d2327;
+    background: #f6f7f7;
+}
+
+.kwwd-series-list-table tr:hover td {
+    background: #f6f7f7;
+}
+
+.kwwd-series-list-table .row-title {
+    font-weight: 600;
+}
+
+.kwwd-series-list-table .post-count {
+    color: #646970;
+}
+
+.kwwd-series-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: #646970;
+}
+
+.kwwd-series-empty .dashicons {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    color: #c2c5ca;
+    margin-bottom: 10px;
+}
+
+.wp-badge-series {
+    display: inline-block;
+    padding: 2px 8px;
+    background: #2271b1;
+    color: #fff;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+@media screen and (max-width: 782px) {
+    .kwwd-series-admin {
+        flex-direction: column;
+    }
+
+    .kwwd-series-available,
+    .kwwd-series-selected {
+        width: 100%;
+    }
+}
