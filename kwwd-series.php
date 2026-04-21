@@ -3,8 +3,9 @@
  * Plugin Name: Simple Series by KWWD
  * Plugin URI: https://kwwdcoding.github.io/kwwd-simple-series.html
  * Description: Create and manage series which allows you to collate posts and pages together to enable users to view all related posts
- * Version: 1.4.1
+ * Version: 1.4.2
  * Author:      KWWD
+ * Author URI: https://www.kwwd.co.uk
  * License:     GPL3
  * Licence URI: https://www.gnu.org/licenses/gpl-3.0.html
  * Requires at least: 6.0
@@ -47,7 +48,27 @@ $myUpdateChecker->addResultFilter(function($info) use ($githubAssets) {
 /***************** END PLUGIN UPDATE **************************/
 
 
-define('KWWD_SERIES_VERSION', '1.4.1');
+/*************************************************************
+ * Plugin Links
+ ************************************************************/
+add_filter( 'plugin_row_meta', 'kwwd_series_custom_meta_links', 10, 2 );
+
+function kwwd_series_custom_meta_links( $links, $file ) {
+    // 1. Set your plugin's unique file path (e.g., folder-name/main-file.php)
+    $plugin_base = 'kwwd-simple-series/kwwd-series.php';
+
+    if ( strpos( $file, $plugin_base ) !== false )
+    {
+        $settings_url = admin_url( 'options-general.php?page=kwwd-simple-series-settings' );
+        $links['settings'] = '<a href="' . esc_url( $settings_url ) . '">Settings</a>';
+        $links['changelog'] = '<a href="https://github.com/KWWDCoding/kwwd-simple-series-for-wp/releases" target="_blank">Changelog</a>';
+        $links['support'] = '<a href="https://support.kwwd.co.uk/" target="_blank">Support</a>';
+    }
+    return $links;
+}
+
+
+define('KWWD_SERIES_VERSION', '1.4.2');
 define('KWWD_SERIES_PATH', plugin_dir_path(__FILE__));
 define('KWWD_SERIES_URL', plugin_dir_url(__FILE__));
 define('KWWD_SERIES_ASSETS_URL', KWWD_SERIES_URL . 'assets');

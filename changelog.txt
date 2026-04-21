@@ -1,7 +1,15 @@
 CHANGELOG
 =========
 
-v1.4.0 (Latest)
+v1.4.2 (Latest)
+---------------
+Added in support & settings links to plugin details
+
+v1.4.1
+---------------
+Added in author link to plugin details
+
+v1.4.0
 ---------------
 Added: Padding setting (0-40px) for series container
 - Available in default settings and individual series override
