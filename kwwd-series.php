@@ -3,13 +3,13 @@
  * Plugin Name: Simple Series by KWWD
  * Plugin URI: https://kwwdcoding.github.io/kwwd-simple-series.html
  * Description: Create and manage series which allows you to collate posts and pages together to enable users to view all related posts
- * Version: 1.4.0
+ * Version: 1.4.1
  * Author:      KWWD
  * License:     GPL3
  * Licence URI: https://www.gnu.org/licenses/gpl-3.0.html
  * Requires at least: 6.0
  * Requires PHP: 8.0
- * Update URI: https://raw.githubusercontent.com/KWWDCoding/'kwwd-simple-series'-for-wp/main/assets/';
+ * Update URI: https://raw.githubusercontent.com/KWWDCoding/kwwd-simple-series-for-wp/main/assets/';
  */
 
 if (!defined('ABSPATH')) {
@@ -20,7 +20,7 @@ if (!defined('ABSPATH')) {
  * UPDATE CHECKER (GITHUB Method)
  *************************************************************/
 // Use the RAW content URL from GitHub
-$githubAssets = 'https://raw.githubusercontent.com/KWWDCoding/'kwwd-simple-series'-for-wp/main/assets/';
+$githubAssets = 'https://raw.githubusercontent.com/KWWDCoding/kwwd-simple-series-for-wp/main/assets/';
 
 require_once plugin_dir_path(__FILE__) . 'includes/plugin-update-checker/plugin-update-checker.php';
 use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
@@ -47,7 +47,7 @@ $myUpdateChecker->addResultFilter(function($info) use ($githubAssets) {
 /***************** END PLUGIN UPDATE **************************/
 
 
-define('KWWD_SERIES_VERSION', '1.4.0');
+define('KWWD_SERIES_VERSION', '1.4.1');
 define('KWWD_SERIES_PATH', plugin_dir_path(__FILE__));
 define('KWWD_SERIES_URL', plugin_dir_url(__FILE__));
 define('KWWD_SERIES_ASSETS_URL', KWWD_SERIES_URL . 'assets');
