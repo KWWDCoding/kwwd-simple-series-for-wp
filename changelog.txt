@@ -1,7 +1,87 @@
 CHANGELOG
 =========
 
-v1.4.2 (Latest)
+v1.5.4 (Latest)
+---------------
+Added: Dedicated series pages at /series/{series-slug}/
+- Clean layout: featured image (with fallback to the first post image that has one), series title, description, and the series posts
+- Posts shown as a List or Grid (3-column responsive) with optional post featured images
+- "All Series" back link when the archive links to series pages
+
+Added: Series archive index at /series/
+- Shows all published series containing at least one published post
+- New "Series Archive Settings" tab: show featured image (with fallback), show post count, show description excerpt
+- Cards link to the series page or expand inline to show the series posts
+- Archive displays as a responsive Grid or a List with the image on the left and the post count and link in a footer row
+
+Added: Series Page URL Slug setting
+- Defaults to "series"; change it if it conflicts with existing content
+- On activation, if the slug is taken, the plugin automatically falls back to the next free slug (e.g. series-2) and notifies you
+- Conflicting slugs are rejected on save with a suggested free slug; a warning shows if a conflict appears later
+- Rewrite rules flushed on activation, update, and slug change
+
+Added: "View Series Page" link on posts
+- Shown at the bottom of the on-post series container per the global setting and the per-post Default/Show/Hide override
+
+Added: "View All Series" link on posts
+- Optional link to the series archive at the bottom of the on-post series container (new "All Series Link" setting on the Default Display Settings tab)
+
+Added: View button on the All Series admin list
+
+v1.5.3
+---------------
+Added: Tabbed settings page
+- Settings now split into "Default Display Settings" and "Series Page Settings" tabs
+- Default tab holds the existing look/position settings
+
+Added: Series Page Settings
+- Show series featured image (on by default)
+- Fallback to first post's featured image (on by default) when the series has no featured image
+- Display series posts as List or Grid (List by default)
+- Display post featured image in the series list (on by default)
+- Display series description (on by default)
+- Stored globally in a new kwwd_series_page_settings option
+
+Added: Series featured image support
+- Series custom post type now supports featured images (thumbnail)
+
+Added: Series Page Link setting
+- New "Display Series Page Link" checkbox on the Default Display Settings tab
+- Per-post/page override via the Series meta box (Default / Show / Hide)
+
+v1.5.2
+---------------
+Fixed: Admin notices now use Series wording
+- "Series published." / "Series updated." instead of "Post published." / "Post updated."
+- Applies to publish, update, save, submit, schedule, and draft messages
+- Added proper post type labels so both classic and block editors show correct wording
+
+v1.5.1
+---------------
+Added: Create a new series inline from the post/page edit screen
+- "Add New Series" box in the Series meta box (like adding a category)
+- Title only - description and settings are configured on the main series edit page
+- New series is created and assigned to the current post immediately
+- Duplicate series names are flagged with an inline message and one-click link to add the post to the existing series
+
+v1.5.0
+---------------
+Added: Display position setting (default: Above Post Content)
+- Choose where the series appears: Above, Below, Both, or None (shortcode only)
+- Available on the Default Settings page
+
+Added: Per-series display position override
+- Each series can override the global position in its Display Settings box
+
+Added: Per-post/page display position override
+- Posts and pages can override the global/series position via the Series meta box
+
+Fixed: Series always rendering below content
+- Position option is now saved and respected on the frontend
+
+Fixed: Removed duplicated Padding setting in series Display Settings box
+
+v1.4.2
 ---------------
 Added in support & settings links to plugin details
 
