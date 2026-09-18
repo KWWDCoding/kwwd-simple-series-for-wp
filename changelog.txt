@@ -1,7 +1,17 @@
 CHANGELOG
 =========
 
-v1.5.4 (Latest)
+v1.5.6 (latest)
+---------------
+- Renamed the main plugin file to match folder structure to match WordPress naming conventions
+- Added version declaration to defined variables
+
+v1.5.5
+---------------
+- Add github zip workflow to remove release version from generated zip file
+- Added rule to ignore "thumbs.db" files
+
+v1.5.4 
 ---------------
 Added: Dedicated series pages at /series/{series-slug}/
 - Clean layout: featured image (with fallback to the first post image that has one), series title, description, and the series posts

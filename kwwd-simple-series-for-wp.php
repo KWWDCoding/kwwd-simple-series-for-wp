@@ -3,7 +3,7 @@
  * Plugin Name: Simple Series by KWWD
  * Plugin URI: https://kwwdcoding.github.io/kwwd-simple-series.html
  * Description: Create and manage series which allows you to collate posts and pages together to enable users to view all related posts
- * Version: 1.5.4
+ * Version: 1.5.6
  * Author:      KWWD
  * Author URI: https://www.kwwd.co.uk
  * License:     GPL3
@@ -17,6 +17,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+define('KWWD_Series_VERSION', '1.5.6');
 /**************************************************************
  * UPDATE CHECKER (GITHUB Method)
  *************************************************************/
