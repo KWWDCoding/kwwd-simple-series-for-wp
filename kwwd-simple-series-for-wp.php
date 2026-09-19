@@ -3,7 +3,7 @@
  * Plugin Name: Simple Series by KWWD
  * Plugin URI: https://kwwdcoding.github.io/kwwd-simple-series.html
  * Description: Create and manage series which allows you to collate posts and pages together to enable users to view all related posts
- * Version: 1.5.6
+ * Version: 1.5.21
  * Author:      KWWD
  * Author URI: https://www.kwwd.co.uk
  * License:     GPL3
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('KWWD_Series_VERSION', '1.5.6');
+define('KWWD_Series_VERSION', '1.5.21');
 /**************************************************************
  * UPDATE CHECKER (GITHUB Method)
  *************************************************************/
@@ -67,7 +67,7 @@ function kwwd_series_custom_meta_links( $links, $file ) {
 }
 
 
-define('KWWD_SERIES_VERSION', '1.5.4');
+define('KWWD_SERIES_VERSION', '1.5.21');
 define('KWWD_SERIES_PATH', plugin_dir_path(__FILE__));
 define('KWWD_SERIES_URL', plugin_dir_url(__FILE__));
 define('KWWD_SERIES_ASSETS_URL', KWWD_SERIES_URL . 'assets');
@@ -78,6 +78,8 @@ final class KWWD_Series_Plugin {
     private $series_cpt = 'kwwd_series';
     private $series_meta_key = '_kwwd_series_posts';
     private $series_order_meta_key = '_kwwd_series_post_orders';
+    private $series_page_template = false;
+    private static $injected_page_content = false;
     private static $output_styles = array();
 
     public static function get_instance() {
@@ -100,11 +102,15 @@ final class KWWD_Series_Plugin {
         add_action('admin_notices', array($this, 'admin_slug_notices'));
         add_action('save_post', array($this, 'save_series_meta'), 10, 2);
         add_action('save_post', array($this, 'save_post_series_assignment'), 11, 2);
+        add_filter('wp_insert_post_data', array($this, 'apply_series_page_slug'), 10, 2);
         add_action('add_meta_boxes', array($this, 'add_series_meta_boxes'));
         add_action('add_meta_boxes', array($this, 'add_post_series_meta_box'));
         add_action('wp_ajax_kwwd_series_update_post_order', array($this, 'ajax_update_post_order'));
+        add_action('wp_ajax_kwwd_series_update_archive_order', array($this, 'ajax_update_archive_order'));
         add_action('wp_ajax_kwwd_series_create', array($this, 'ajax_create_series'));
         add_action('the_content', array($this, 'display_series_on_content'));
+        add_filter('the_content', array($this, 'inject_series_page_content'), 0);
+        add_filter('comments_open', array($this, 'force_closed_comments'), 10, 2);
         add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_scripts'));
         add_filter('template_include', array($this, 'series_template_include'));
         add_action('wp_footer', array($this, 'print_collapsible_script'), 99);
@@ -183,7 +189,13 @@ final class KWWD_Series_Plugin {
             'series_page_layout' => 'list',
             'series_page_show_post_image' => '1',
             'series_page_show_description' => '1',
-            'series_page_fallback_first_post_image' => '1'
+            'series_page_fallback_first_post_image' => '1',
+            'series_page_grid_image_size' => 'medium_large',
+            'series_page_grid_image_width' => '300',
+            'series_page_grid_image_height' => '',
+            'series_page_list_image_size' => 'medium',
+            'series_page_list_image_width' => '150',
+            'series_page_list_image_height' => ''
         ));
         $settings['series_page_slug'] = $fallback;
         update_option('kwwd_series_page_settings', $settings);
@@ -294,7 +306,8 @@ final class KWWD_Series_Plugin {
             'border_radius' => '8',
             'list_style' => 'decimal',
             'padding' => '20',
-            'collapsed' => '0'
+            'collapsed' => '0',
+            'supported_content_types' => array('post', 'page')
         ));
 
         $page_options = get_option('kwwd_series_page_settings', array(
@@ -303,7 +316,13 @@ final class KWWD_Series_Plugin {
             'series_page_layout' => 'list',
             'series_page_show_post_image' => '1',
             'series_page_show_description' => '1',
-            'series_page_fallback_first_post_image' => '1'
+            'series_page_fallback_first_post_image' => '1',
+            'series_page_grid_image_size' => 'medium_large',
+            'series_page_grid_image_width' => '300',
+            'series_page_grid_image_height' => '',
+            'series_page_list_image_size' => 'medium',
+            'series_page_list_image_width' => '150',
+            'series_page_list_image_height' => ''
         ));
 
         $archive_options = get_option('kwwd_series_archive_settings', array(
@@ -312,8 +331,19 @@ final class KWWD_Series_Plugin {
             'archive_show_count' => '1',
             'archive_show_description' => '1',
             'archive_link_mode' => 'page',
-            'archive_layout' => 'grid'
+            'archive_layout' => 'grid',
+            'archive_sort_by' => 'manual',
+            'archive_grid_image_size' => 'medium',
+            'archive_grid_image_width' => '300',
+            'archive_grid_image_height' => '',
+            'archive_list_image_size' => 'medium',
+            'archive_list_image_width' => '150',
+            'archive_list_image_height' => ''
         ));
+
+        $general_options = get_option('kwwd_series_general_settings', array());
+        $remove_on_uninstall = isset($general_options['remove_data_on_uninstall']) ? $general_options['remove_data_on_uninstall'] : '0';
+        $remove_series_images = isset($general_options['remove_series_images']) ? $general_options['remove_series_images'] : '0';
 
         $current_slug = isset($page_options['series_page_slug']) ? $page_options['series_page_slug'] : 'series';
 
@@ -351,7 +381,8 @@ final class KWWD_Series_Plugin {
                 'border_radius' => intval($_POST['border_radius']),
                 'list_style' => sanitize_text_field($_POST['list_style']),
                 'padding' => intval($_POST['padding']),
-                'collapsed' => isset($_POST['collapsed']) ? '1' : '0'
+                'collapsed' => isset($_POST['collapsed']) ? '1' : '0',
+                'supported_content_types' => $this->get_saved_supported_content_types()
             );
             update_option('kwwd_series_default_settings', $options);
 
@@ -362,7 +393,13 @@ final class KWWD_Series_Plugin {
                 'series_page_layout' => in_array($layout, array('grid', 'list'), true) ? $layout : 'list',
                 'series_page_show_post_image' => isset($_POST['series_page_show_post_image']) ? '1' : '0',
                 'series_page_show_description' => isset($_POST['series_page_show_description']) ? '1' : '0',
-                'series_page_fallback_first_post_image' => isset($_POST['series_page_fallback_first_post_image']) ? '1' : '0'
+                'series_page_fallback_first_post_image' => isset($_POST['series_page_fallback_first_post_image']) ? '1' : '0',
+                'series_page_grid_image_size' => $this->get_saved_image_size('series_page_grid_image_size', 'medium_large'),
+                'series_page_grid_image_width' => $this->get_saved_dimension('series_page_grid_image_width'),
+                'series_page_grid_image_height' => $this->get_saved_dimension('series_page_grid_image_height'),
+                'series_page_list_image_size' => $this->get_saved_image_size('series_page_list_image_size', 'medium'),
+                'series_page_list_image_width' => $this->get_saved_dimension('series_page_list_image_width'),
+                'series_page_list_image_height' => $this->get_saved_dimension('series_page_list_image_height')
             );
             update_option('kwwd_series_page_settings', $page_options);
 
@@ -374,9 +411,22 @@ final class KWWD_Series_Plugin {
                 'archive_show_count' => isset($_POST['archive_show_count']) ? '1' : '0',
                 'archive_show_description' => isset($_POST['archive_show_description']) ? '1' : '0',
                 'archive_link_mode' => in_array($archive_link_mode, array('page', 'expand'), true) ? $archive_link_mode : 'page',
-                'archive_layout' => in_array($archive_layout, array('grid', 'list'), true) ? $archive_layout : 'grid'
+                'archive_layout' => in_array($archive_layout, array('grid', 'list'), true) ? $archive_layout : 'grid',
+                'archive_sort_by' => $this->get_saved_archive_sort_value(),
+                'archive_grid_image_size' => $this->get_saved_image_size('archive_grid_image_size', 'medium'),
+                'archive_grid_image_width' => $this->get_saved_dimension('archive_grid_image_width'),
+                'archive_grid_image_height' => $this->get_saved_dimension('archive_grid_image_height'),
+                'archive_list_image_size' => $this->get_saved_image_size('archive_list_image_size', 'medium'),
+                'archive_list_image_width' => $this->get_saved_dimension('archive_list_image_width'),
+                'archive_list_image_height' => $this->get_saved_dimension('archive_list_image_height')
             );
             update_option('kwwd_series_archive_settings', $archive_options);
+
+            $general_options = array(
+                'remove_data_on_uninstall' => isset($_POST['kwwd_series_remove_on_uninstall']) ? '1' : '0',
+                'remove_series_images' => isset($_POST['kwwd_series_remove_images']) ? '1' : '0'
+            );
+            update_option('kwwd_series_general_settings', $general_options);
 
             if ($new_slug !== $old_slug) {
                 flush_rewrite_rules();
@@ -404,6 +454,7 @@ final class KWWD_Series_Plugin {
         echo '<a href="#kwwd-tab-default" class="nav-tab nav-tab-active" data-tab="kwwd-tab-default">' . esc_html__('Default Display Settings', 'kwwd-simple-series') . '</a>';
         echo '<a href="#kwwd-tab-series-page" class="nav-tab" data-tab="kwwd-tab-series-page">' . esc_html__('Series Page Settings', 'kwwd-simple-series') . '</a>';
         echo '<a href="#kwwd-tab-series-archive" class="nav-tab" data-tab="kwwd-tab-series-archive">' . esc_html__('Series Archive Settings', 'kwwd-simple-series') . '</a>';
+        echo '<a href="#kwwd-tab-general" class="nav-tab" data-tab="kwwd-tab-general">' . esc_html__('General Settings', 'kwwd-simple-series') . '</a>';
         echo '</h2>';
 
         echo '<div id="kwwd-tab-default" class="kwwd-settings-tab"><table class="form-table">';
@@ -468,11 +519,38 @@ final class KWWD_Series_Plugin {
         }
 
         echo '<div id="kwwd-tab-series-page" class="kwwd-settings-tab" style="display:none;"><table class="form-table">';
+        echo '<tr><th colspan="2"><h3 style="margin:14px 0 4px;">' . esc_html__('Supported Content Types', 'kwwd-simple-series') . '</h3></th></tr>';
+        echo '<tr><th>' . esc_html__('Content Types', 'kwwd-simple-series') . '</th><td>';
+        $supported_content_types = isset($options['supported_content_types']) ? (array) $options['supported_content_types'] : array('post', 'page');
+        $available_content_types = $this->get_available_content_post_types();
+        if (empty($available_content_types)) {
+            echo '<p class="description">' . esc_html__('No public custom post types detected.', 'kwwd-simple-series') . '</p>';
+        } else {
+            echo '<fieldset>';
+            foreach ($available_content_types as $ct) {
+                $obj = get_post_type_object($ct);
+                $label = ($obj && $obj->labels) ? $obj->labels->name : $ct;
+                $is_core = ($ct === 'post');
+                $checked = in_array($ct, $supported_content_types, true);
+                echo '<label style="display:block;margin-bottom:4px;"><input type="checkbox" name="supported_content_types[]" value="' . esc_attr($ct) . '"' . checked($checked, true, false);
+                if ($is_core) echo ' disabled="disabled"';
+                echo ' /> ' . esc_html($label) . ($is_core ? ' <span class="description">(' . esc_html__('always on', 'kwwd-simple-series') . ')</span>' : '') . '</label>';
+            }
+            echo '</fieldset>';
+        }
+        echo '<p class="description" style="margin-top:4px;">' . esc_html__('Which content types can be added to a series. Posts are always supported; you can switch Pages and any custom post type on or off. Unchecked types are left out of the series picker and do not show the Assign to Series box.', 'kwwd-simple-series') . '</p>';
+        echo '</td></tr>';
+        echo '<tr><th colspan="2"><h3 style="margin:14px 0 4px;">' . esc_html__('Featured Image', 'kwwd-simple-series') . '</h3></th></tr>';
         echo '<tr><th>' . esc_html__('Show Series Featured Image', 'kwwd-simple-series') . '</th><td><label><input type="checkbox" name="series_page_show_image" value="1" ' . checked($page_options['series_page_show_image'], '1', false) . ' /> ' . esc_html__('Display the series featured image at the top of the series page', 'kwwd-simple-series') . '</label><p class="description" style="margin-top:4px;"><label><input type="checkbox" name="series_page_fallback_first_post_image" value="1" ' . checked($page_options['series_page_fallback_first_post_image'], '1', false) . ' /> ' . esc_html__('Fallback to the featured image of the first post in the series that has one', 'kwwd-simple-series') . '</label></p></td></tr>';
+        echo '<tr><th colspan="2"><h3 style="margin:14px 0 4px;">' . esc_html__('Posts Layout', 'kwwd-simple-series') . '</h3></th></tr>';
         echo '<tr><th>' . esc_html__('Display Series Posts As', 'kwwd-simple-series') . '</th><td><select name="series_page_layout">';
         echo '<option value="list" ' . selected($page_options['series_page_layout'], 'list', false) . '>' . esc_html__('List', 'kwwd-simple-series') . '</option>';
         echo '<option value="grid" ' . selected($page_options['series_page_layout'], 'grid', false) . '>' . esc_html__('Grid', 'kwwd-simple-series') . '</option>';
         echo '</select></td></tr>';
+        echo '<tr><th colspan="2"><h3 style="margin:14px 0 4px;">' . esc_html__('Grid Image', 'kwwd-simple-series') . '</h3></th></tr>';
+        $this->render_image_size_fields('series_page_grid', $this->get_setting_image_size($page_options, 'series_page_grid_image_size', 'medium_large'), $this->get_setting_dimension($page_options, 'series_page_grid_image_width', 300), $this->get_setting_dimension($page_options, 'series_page_grid_image_height'), 300);
+        echo '<tr><th colspan="2"><h3 style="margin:14px 0 4px;">' . esc_html__('List Image', 'kwwd-simple-series') . '</h3></th></tr>';
+        $this->render_image_size_fields('series_page_list', $this->get_setting_image_size($page_options, 'series_page_list_image_size', 'medium'), $this->get_setting_dimension($page_options, 'series_page_list_image_width', 150), $this->get_setting_dimension($page_options, 'series_page_list_image_height'), 150);
         echo '<tr><th>' . esc_html__('Display Post Featured Image', 'kwwd-simple-series') . '</th><td><label><input type="checkbox" name="series_page_show_post_image" value="1" ' . checked($page_options['series_page_show_post_image'], '1', false) . ' /> ' . esc_html__('Show each post\'s featured image in the series list', 'kwwd-simple-series') . '</label></td></tr>';
         echo '<tr><th>' . esc_html__('Display Series Description', 'kwwd-simple-series') . '</th><td><label><input type="checkbox" name="series_page_show_description" value="1" ' . checked($page_options['series_page_show_description'], '1', false) . ' /> ' . esc_html__('Show the series description on the series page', 'kwwd-simple-series') . '</label></td></tr>';
         echo '</table></div>';
@@ -486,30 +564,60 @@ final class KWWD_Series_Plugin {
         echo '<option value="grid" ' . selected($archive_options['archive_layout'], 'grid', false) . '>' . esc_html__('Grid', 'kwwd-simple-series') . '</option>';
         echo '<option value="list" ' . selected($archive_options['archive_layout'], 'list', false) . '>' . esc_html__('List', 'kwwd-simple-series') . '</option>';
         echo '</select></td></tr>';
+        echo '<tr><th>' . esc_html__('Series Sort Order', 'kwwd-simple-series') . '</th><td><select name="archive_sort_by">';
+        echo '<option value="manual" ' . selected($archive_options['archive_sort_by'], 'manual', false) . '>' . esc_html__('Manual Order (drag and drop)', 'kwwd-simple-series') . '</option>';
+        echo '<option value="name_asc" ' . selected($archive_options['archive_sort_by'], 'name_asc', false) . '>' . esc_html__('Series Name (A-Z)', 'kwwd-simple-series') . '</option>';
+        echo '<option value="name_desc" ' . selected($archive_options['archive_sort_by'], 'name_desc', false) . '>' . esc_html__('Series Name (Z-A)', 'kwwd-simple-series') . '</option>';
+        echo '<option value="date_asc" ' . selected($archive_options['archive_sort_by'], 'date_asc', false) . '>' . esc_html__('Date Series Created (oldest first)', 'kwwd-simple-series') . '</option>';
+        echo '<option value="date_desc" ' . selected($archive_options['archive_sort_by'], 'date_desc', false) . '>' . esc_html__('Date Series Created (newest first)', 'kwwd-simple-series') . '</option>';
+        echo '<option value="modified" ' . selected($archive_options['archive_sort_by'], 'modified', false) . '>' . esc_html__('Most Recently Updated', 'kwwd-simple-series') . '</option>';
+        echo '</select><p class="description" style="margin-top:4px;">' . esc_html__('How the series are ordered on the archive page. For "Manual Order", drag the handle on the Series > All Series screen; series you have not dragged appear at the end.', 'kwwd-simple-series') . '</p></td></tr>';
+        echo '<tr><th colspan="2"><h3 style="margin:14px 0 4px;">' . esc_html__('Grid Image', 'kwwd-simple-series') . '</h3></th></tr>';
+        $this->render_image_size_fields('archive_grid', $this->get_setting_image_size($archive_options, 'archive_grid_image_size', 'medium'), $this->get_setting_dimension($archive_options, 'archive_grid_image_width', 300), $this->get_setting_dimension($archive_options, 'archive_grid_image_height'), 300);
+        echo '<tr><th colspan="2"><h3 style="margin:14px 0 4px;">' . esc_html__('List Image', 'kwwd-simple-series') . '</h3></th></tr>';
+        $this->render_image_size_fields('archive_list', $this->get_setting_image_size($archive_options, 'archive_list_image_size', 'medium'), $this->get_setting_dimension($archive_options, 'archive_list_image_width', 150), $this->get_setting_dimension($archive_options, 'archive_list_image_height'), 150);
         echo '<tr><th>' . esc_html__('Card Link Behavior', 'kwwd-simple-series') . '</th><td><select name="archive_link_mode">';
         echo '<option value="page" ' . selected($archive_options['archive_link_mode'], 'page', false) . '>' . esc_html__('Link to series page', 'kwwd-simple-series') . '</option>';
         echo '<option value="expand" ' . selected($archive_options['archive_link_mode'], 'expand', false) . '>' . esc_html__('Expandable list (posts shown inline)', 'kwwd-simple-series') . '</option>';
         echo '</select><p class="description" style="margin-top:4px;">' . esc_html__('When linking to series pages, an "All Series" back link appears on each series page.', 'kwwd-simple-series') . '</p></td></tr>';
         echo '</table></div>';
 
+        echo '<div id="kwwd-tab-general" class="kwwd-settings-tab" style="display:none;"><table class="form-table">';
+        echo '<tr><th>' . esc_html__('Uninstall', 'kwwd-simple-series') . '</th><td><label><input type="checkbox" name="kwwd_series_remove_on_uninstall" id="kwwd_series_remove_on_uninstall" value="1" ' . checked($remove_on_uninstall, '1', false) . ' /> ' . esc_html__('Remove all plugin data when the plugin is deleted', 'kwwd-simple-series') . '</label><p class="description" style="margin-top:4px;">' . esc_html__('When enabled, uninstalling (deleting) this plugin deletes all series, their settings and any series assignments on posts. Leave unchecked to keep your data if you ever reinstall.', 'kwwd-simple-series') . '</p><p style="margin:6px 0 0 24px;"><label><input type="checkbox" name="kwwd_series_remove_images" id="kwwd_series_remove_images" value="1" ' . checked($remove_series_images, '1', false) . ' /> ' . esc_html__('Also delete series images', 'kwwd-simple-series') . '</label></p><p class="description" style="margin:2px 0 0 24px;">' . esc_html__('Deletes featured images set on series pages when uninstalling, as long as they are not still used by another post.', 'kwwd-simple-series') . '</p><script>jQuery(function($){var $main=$("#kwwd_series_remove_on_uninstall");var $img=$("#kwwd_series_remove_images");function kwwdSyncUninstallImages(){$img.prop("disabled",!$main.prop("checked"));}$main.on("change",kwwdSyncUninstallImages);kwwdSyncUninstallImages();});</script></td></tr>';
+        echo '</table></div>';
+
         echo '<p><input type="submit" name="save_defaults" class="button button-primary" value="' . esc_attr__('Save Settings', 'kwwd-simple-series') . '" /></p></form></div>';
         echo '<script>jQuery(document).ready(function($){function kwwdShowTab(t){$(".nav-tab-wrapper .nav-tab").removeClass("nav-tab-active");$(\'.nav-tab-wrapper .nav-tab[data-tab="\'+t+\'"]\').addClass("nav-tab-active");$(".kwwd-settings-tab").hide();$("#"+t).show();}var saved=sessionStorage.getItem("kwwd_series_settings_tab");if(saved){kwwdShowTab(saved);}$(".nav-tab-wrapper .nav-tab").on("click",function(e){e.preventDefault();var t=$(this).data("tab");kwwdShowTab(t);sessionStorage.setItem("kwwd_series_settings_tab",t);});});</script>';
+        echo '<script>jQuery(document).ready(function($){$("select[name$=\\"_image_size\\"]").on("change",function(){var o=$(this).find("option:selected");var w=parseInt(o.attr("data-width"),10)||0;var h=parseInt(o.attr("data-height"),10)||0;var $row=$(this).closest("tr").next("tr");$row.find("input[name$=\\"_image_width\\"]").val(w||"");$row.find("input[name$=\\"_image_height\\"]").val(h||"");});});</script>';
     }
 
     public function render_series_admin_page() {
         $series_list = get_posts(array('post_type' => $this->series_cpt, 'post_status' => 'publish', 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC'));
+        $ordered_ids = $this->get_ordered_series_ids(wp_list_pluck($series_list, 'ID'));
+        $series_by_id = array();
+        foreach ($series_list as $series) {
+            $series_by_id[$series->ID] = $series;
+        }
+        $series_list = array();
+        foreach ($ordered_ids as $sid) {
+            if (isset($series_by_id[$sid])) {
+                $series_list[] = $series_by_id[$sid];
+            }
+        }
         echo '<div class="wrap"><h1>' . esc_html__('Article Series', 'kwwd-simple-series') . ' <a href="' . admin_url('post-new.php?post_type=' . $this->series_cpt) . '" class="button button-primary">' . esc_html__('Add New Series', 'kwwd-simple-series') . '</a></h1>';
         if (empty($series_list)) {
             echo '<p>' . esc_html__('No series yet.', 'kwwd-simple-series') . '</p>';
         } else {
-            echo '<table class="widefat"><thead><tr><th>' . esc_html__('Title', 'kwwd-simple-series') . '</th><th>' . esc_html__('Posts', 'kwwd-simple-series') . '</th><th>' . esc_html__('Shortcode', 'kwwd-simple-series') . '</th><th>' . esc_html__('Date', 'kwwd-simple-series') . '</th><th>' . esc_html__('Actions', 'kwwd-simple-series') . '</th></tr></thead><tbody>';
+            echo '<p class="description">' . esc_html__('Drag the handle to change the order series appear on the series archive page.', 'kwwd-simple-series') . '</p>';
+            echo '<table class="widefat kwwd-series-order-table"><thead><tr><th class="kwwd-series-order-handle-col"></th><th>' . esc_html__('Title', 'kwwd-simple-series') . '</th><th>' . esc_html__('Posts', 'kwwd-simple-series') . '</th><th>' . esc_html__('Shortcode', 'kwwd-simple-series') . '</th><th>' . esc_html__('Date', 'kwwd-simple-series') . '</th><th>' . esc_html__('Actions', 'kwwd-simple-series') . '</th></tr></thead><tbody id="kwwd-series-order-list">';
             foreach ($series_list as $series) {
                 $post_ids = get_post_meta($series->ID, $this->series_meta_key, true);
                 $count = is_array($post_ids) ? count($post_ids) : 0;
                 $shortcode = '[simple_series id=' . $series->ID . ']';
                 $edit_link = get_edit_post_link($series->ID);
                 $delete_url = get_delete_post_link($series->ID, '', 'false');
-                echo '<tr>';
+                echo '<tr data-series-id="' . esc_attr($series->ID) . '">';
+                echo '<td><span class="dashicons dashicons-menu kwwd-series-order-handle" title="' . esc_attr__('Drag to reorder', 'kwwd-simple-series') . '"></span></td>';
                 echo '<td><a href="' . esc_url($edit_link) . '"><strong>' . esc_html($series->post_title) . '</strong></a></td>';
                 echo '<td><span class="post-count-badge" style="display:inline-block;padding:2px 8px;background:' . ($count > 0 ? '#4ab866' : '#ccc') . ';color:#fff;border-radius:10px;font-size:12px;font-weight:bold;">' . esc_html($count) . ' post' . ($count !== 1 ? 's' : '') . '</span></td>';
                 echo '<td><code style="cursor:pointer" onclick="navigator.clipboard.writeText(this.innerText);jQuery(this).text(\'Copied!\').css(\'background\',\'#4ab866\').css(\'color\',\'#fff\');setTimeout(()=>jQuery(this).text(\'' . esc_js($shortcode) . '\').css(\'background\',\'#f5f5f5\').css(\'color\',\'#333\'),2000);">' . esc_html($shortcode) . '</code></td>';
@@ -534,12 +642,13 @@ final class KWWD_Series_Plugin {
         if (!$screen) return;
 
         $is_series_screen = ($screen->post_type === $this->series_cpt);
-        $is_post_screen = ($screen->base === 'post' && in_array($screen->post_type, array('post', 'page'), true));
-        if (!$is_series_screen && !$is_post_screen) return;
+        $is_post_screen = ($screen->base === 'post' && in_array($screen->post_type, $this->get_supported_content_post_types(), true));
+        $is_series_list_screen = (strpos($hook, 'kwwd-simple-series') !== false);
+        if (!$is_series_screen && !$is_post_screen && !$is_series_list_screen) return;
 
         wp_enqueue_style('kwwd-series-admin', KWWD_SERIES_ASSETS_URL . '/css/admin-series.css', array(), $this->asset_version('assets/css/admin-series.css'));
 
-        if ($is_series_screen) {
+        if ($is_series_screen || $is_series_list_screen) {
             wp_enqueue_script('jquery-ui-sortable');
         }
         wp_enqueue_script('jquery');
@@ -575,20 +684,110 @@ final class KWWD_Series_Plugin {
     }
 
     public function series_template_include($template) {
+        $is_single = is_singular($this->series_cpt);
+        $is_archive = is_post_type_archive($this->series_cpt);
+        if (!$is_single && !$is_archive) {
+            return $template;
+        }
+
+        $group = $is_single ? 'single' : 'archive';
+
+        if (!apply_filters('kwwd_series_render_through_theme_page', true, $template, $group)) {
+            return $template;
+        }
+
+        $dedicated = locate_template(array($group . '-' . $this->series_cpt . '.php'));
+        if ($dedicated) {
+            self::$injected_page_content = false;
+            $this->series_page_template = false;
+            return $dedicated;
+        }
+
+        $page_template = locate_template(array('page.php'));
+        if ($page_template) {
+            self::$injected_page_content = false;
+            $this->series_page_template = true;
+            if ($is_archive) {
+                $this->prepare_archive_virtual_post();
+            }
+            return $page_template;
+        }
+
+        $file = KWWD_SERIES_PATH . 'templates/' . ($group === 'single' ? 'single-series.php' : 'archive-kwwd_series.php');
+        return (file_exists($file)) ? $file : $template;
+    }
+
+    private function prepare_archive_virtual_post() {
+        global $post;
+
+        $virtual = new WP_Post((object) array(
+            'ID' => 0,
+            'post_author' => 0,
+            'post_date' => '',
+            'post_date_gmt' => '',
+            'post_content' => '',
+            'post_title' => __('Series', 'kwwd-simple-series'),
+            'post_excerpt' => '',
+            'post_status' => 'publish',
+            'comment_status' => 'closed',
+            'ping_status' => 'closed',
+            'post_password' => '',
+            'post_name' => 'series',
+            'to_ping' => '',
+            'pinged' => '',
+            'post_modified' => '',
+            'post_modified_gmt' => '',
+            'post_content_filtered' => '',
+            'post_parent' => 0,
+            'guid' => '',
+            'menu_order' => 0,
+            'post_type' => $this->series_cpt,
+            'post_mime_type' => '',
+            'comment_count' => 0,
+            'filter' => 'raw',
+        ));
+
+        $GLOBALS['wp_query']->post = $virtual;
+        $GLOBALS['wp_query']->posts = array($virtual);
+        $GLOBALS['wp_query']->post_count = 1;
+        $GLOBALS['wp_query']->found_posts = 1;
+        $GLOBALS['wp_query']->max_num_pages = 1;
+        $post = $virtual;
+    }
+
+    public function inject_series_page_content($content) {
+        if (is_admin() || is_feed() || !in_the_loop() || self::$injected_page_content) {
+            return $content;
+        }
+
         if (is_singular($this->series_cpt)) {
-            $file = KWWD_SERIES_PATH . 'templates/single-series.php';
-            return (file_exists($file)) ? $file : $template;
+            $series_id = get_queried_object_id();
+            if (!$series_id) {
+                return $content;
+            }
+            self::$injected_page_content = true;
+            return '<div class="kwwd-series-page">' . $this->get_series_page_html($series_id, false) . '</div>' . $content;
         }
-        if (is_post_type_archive($this->series_cpt)) {
-            $file = KWWD_SERIES_PATH . 'templates/archive-kwwd_series.php';
-            return (file_exists($file)) ? $file : $template;
+
+        if ($this->series_page_template && is_post_type_archive($this->series_cpt)) {
+            self::$injected_page_content = true;
+            return '<div class="kwwd-series-archive">' . $this->get_series_archive_html() . '</div>' . $content;
         }
-        return $template;
+
+        return $content;
+    }
+
+    public function force_closed_comments($open, $post_id) {
+        if (is_singular($this->series_cpt) || is_post_type_archive($this->series_cpt)) {
+            return false;
+        }
+        return $open;
     }
 
     public function add_series_meta_boxes() {
         add_meta_box('kwwd_series_description_box', __('Series Description', 'kwwd-simple-series'), array($this, 'render_series_description_box'), $this->series_cpt, 'normal', 'high');
         add_meta_box('kwwd_series_posts_box', __('Posts in This Series (Drag to Order)', 'kwwd-simple-series'), array($this, 'render_series_posts_box'), $this->series_cpt, 'normal', 'high');
+        add_meta_box('kwwd_series_slug_box', __('Series Page URL Slug', 'kwwd-simple-series'), array($this, 'render_series_slug_box'), $this->series_cpt, 'normal', 'high');
         add_meta_box('kwwd_series_shortcode_box', __('Shortcode', 'kwwd-simple-series'), array($this, 'render_shortcode_box'), $this->series_cpt, 'side', 'default');
         add_meta_box('kwwd_series_settings_box', __('Display Settings', 'kwwd-simple-series'), array($this, 'render_series_settings_box'), $this->series_cpt, 'side', 'default');
     }
@@ -598,6 +797,18 @@ final class KWWD_Series_Plugin {
         echo '<p><strong>' . esc_html__('Description', 'kwwd-simple-series') . '</strong></p>';
         echo '<p style="margin-top:5px;color:#646970;font-size:12px;">' . esc_html__('This displays below the series title on the frontend.', 'kwwd-simple-series') . '</p>';
         echo '<textarea name="kwwd_series_description" rows="4" style="width:100%;">' . esc_textarea($description) . '</textarea>';
+    }
+
+    public function render_series_slug_box($post) {
+        $page_url = get_permalink($post->ID);
+        echo '<p style="margin-top:5px;color:#646970;font-size:12px;">' . esc_html__('Controls the slug in the URL of this series page (everything after the base slug). Leave blank to keep the automatically generated slug from the series title. For example, "Star Trek: Strange New Worlds" generates the URL:', 'kwwd-simple-series') . '</p>';
+        echo '<code style="display:block;padding:8px;background:#f5f5f5;margin:6px 0 8px;">' . esc_html($page_url ? $page_url : '') . '</code>';
+        echo '<input type="text" name="kwwd_series_page_slug" value="' . esc_attr($post->post_name) . '" style="width:100%;" />';
+        echo '<p class="description" style="margin-top:4px;">' . sprintf(
+            esc_html__('Change it to something shorter, e.g. %s, and the page will move to %s.', 'kwwd-simple-series'),
+            '<code>' . esc_html('star-trek-snw') . '</code>',
+            '<code>' . esc_html($page_url ? trailingslashit(dirname(rtrim($page_url, '/'))) . 'star-trek-snw/' : '') . '</code>'
+        ) . '</p>';
     }
 
     public function render_shortcode_box($post) {
@@ -617,12 +828,23 @@ final class KWWD_Series_Plugin {
             return $order_a - $order_b;
         });
         
-        // Get all posts and pages for adding
-        $posts = get_posts(array('post_type' => array('post', 'page'), 'post_status' => 'publish', 'numberposts' => -1, 'orderby' => 'title', 'order' => 'ASC'));
-        
+        // Get all supported content for adding (published, draft, pending and scheduled)
+        $posts = get_posts(array('post_type' => $this->get_supported_content_post_types(), 'post_status' => array('publish', 'draft', 'pending', 'future'), 'numberposts' => -1, 'orderby' => 'title', 'order' => 'ASC'));
+
+        $status_labels = array(
+            'publish' => '',
+            'draft' => ' (Draft)',
+            'pending' => ' (Pending)',
+            'future' => ' (Scheduled)',
+        );
+        $type_labels = array();
+        foreach (get_post_types(array(), 'objects') as $ctype) {
+            $type_labels[$ctype->name] = ($ctype->labels && $ctype->labels->singular_name) ? $ctype->labels->singular_name : $ctype->name;
+        }
+
         echo '<div style="margin-bottom:20px;padding:15px;background:#f6f7f7;border-radius:4px;">';
-        echo '<strong>' . esc_html__('Add Post or Page', 'kwwd-simple-series') . '</strong><br>';
-        echo '<input type="text" id="kwwd-post-search" placeholder="Type to search posts..." style="margin-top:5px;width:100%;max-width:300px;" /> ';
+        echo '<strong>' . esc_html__('Add Content', 'kwwd-simple-series') . '</strong><br>';
+        echo '<input type="text" id="kwwd-post-search" placeholder="Type to search..." style="margin-top:5px;width:100%;max-width:300px;" /> ';
         echo '<div id="kwwd-search-results" style="margin-top:5px;max-height:200px;overflow-y:auto;border:1px solid #ccc;background:#fff;display:none;"></div>';
         echo '<script>jQuery(document).ready(function($){var allPosts=[';
         $first = true;
@@ -631,11 +853,13 @@ final class KWWD_Series_Plugin {
             if (!is_array($series_ids)) $series_ids = array();
             $in_series = in_array($post->ID, $series_ids) ? '1' : '0';
             if (!$first) echo ',';
-            echo '{id:' . $p->ID . ',title:"' . esc_js($p->post_title) . '",type:"' . $p->post_type . '",inSeries:' . $in_series . '}';
+            $type_label = isset($type_labels[$p->post_type]) ? $type_labels[$p->post_type] : $p->post_type;
+            $status_label = isset($status_labels[$p->post_status]) ? $status_labels[$p->post_status] : '';
+            echo '{id:' . $p->ID . ',title:"' . esc_js($p->post_title) . '",type:"' . esc_js($type_label) . '",status:"' . esc_js($status_label) . '",inSeries:' . $in_series . '}';
             $first = false;
         }
-        echo '];var $search=$("#kwwd-post-search");var $results=$("#kwwd-search-results");$search.on("input",function(){var q=$(this).val().toLowerCase();$results.empty();if(q.length<2){$results.hide();return}var matches=allPosts.filter(function(p){return p.title.toLowerCase().indexOf(q)>-1});if(matches.length===0){$results.append("<p style=\'padding:10px;color:#646970;\'>No posts found</p>")}else{matches.forEach(function(p){var btn=p.inSeries?"":"<button type=\'button\' class=\'button button-small kwwd-add-single\' data-id=\'"+p.id+"\' data-title=\'"+p.title.replace(/"/g,"&quot;")+"\' style=\'margin-left:10px;\'>Add</button>";var txt=p.inSeries?" - already in this series":"";$results.append("<p style=\'margin:5px;padding:5px;border-bottom:1px solid #eee;\'>"+p.title+" ("+p.type+")"+txt+btn+"</p>")})}$results.show()});$(document).on("click",".kwwd-add-single",function(){var pid=$(this).data("id");var ptitle=$(this).data("title");var li=$("<li>").addClass("kwwd-series-post-item").attr("data-id",pid);li.append($("<span>").addClass("dashicons dashicons-menu")).append(" ").append($("<a>").attr("href","' . admin_url('post.php?post=') . '"+pid+"&action=edit").attr("target","_blank").text(ptitle));li.append($("<input>").attr("type","hidden").attr("name","kwwd_series_posts[]").val(pid));$(".kwwd-series-posts-list").append(li);$(this).prop("disabled",true).text("Added").closest("p").append(" - already in this series")})});</script>';
-        echo '<p style="margin-top:10px;margin-bottom:0;font-size:12px;color:#646970;">' . esc_html__('Posts can belong to multiple series.', 'kwwd-simple-series') . '</p>';
+        echo '];var $search=$("#kwwd-post-search");var $results=$("#kwwd-search-results");$search.on("input",function(){var q=$(this).val().toLowerCase();$results.empty();if(q.length<2){$results.hide();return}var matches=allPosts.filter(function(p){return p.title.toLowerCase().indexOf(q)>-1});if(matches.length===0){$results.append("<p style=\'padding:10px;color:#646970;\'>No posts found</p>")}else{matches.forEach(function(p){var btn=p.inSeries?"":"<button type=\'button\' class=\'button button-small kwwd-add-single\' data-id=\'"+p.id+"\' data-title=\'"+p.title.replace(/"/g,"&quot;")+"\' data-status=\'"+p.status+"\' style=\'margin-left:10px;\'>Add</button>";var txt=p.inSeries?" - already in this series":"";$results.append("<p style=\'margin:5px;padding:5px;border-bottom:1px solid #eee;\'>"+p.title+" ("+p.type+p.status+")"+txt+btn+"</p>")})}$results.show()});$(document).on("click",".kwwd-add-single",function(){var pid=$(this).data("id");var ptitle=$(this).data("title");var pstatus=$(this).data("status");var li=$("<li>").addClass("kwwd-series-post-item").attr("data-id",pid);li.append($("<span>").addClass("dashicons dashicons-menu")).append(" ").append($("<a>").attr("href","' . admin_url('post.php?post=') . '"+pid+"&action=edit").attr("target","_blank").text(ptitle));if(pstatus){li.append(" <span style=\'color:#b32d2e;font-weight:600;font-size:11px;\'>"+pstatus.replace(/^\\s+|\\s+$/g,"")+"</span>")}li.append($("<input>").attr("type","hidden").attr("name","kwwd_series_posts[]").val(pid));$(".kwwd-series-posts-list").append(li);$(this).prop("disabled",true).text("Added").closest("p").append(" - already in this series")})});</script>';
+        echo '<p style="margin-top:10px;margin-bottom:0;font-size:12px;color:#646970;">' . esc_html__('Content can belong to multiple series. Items that are not published yet are hidden on the frontend until they go live.', 'kwwd-simple-series') . '</p>';
         echo '</div>';
         
         echo '<h4>' . esc_html__('Posts in This Series', 'kwwd-simple-series') . '</h4>';
@@ -646,6 +870,9 @@ final class KWWD_Series_Plugin {
                 echo '<li class="kwwd-series-post-item" data-id="' . esc_attr($pid) . '">';
                 echo '<span class="dashicons dashicons-menu"></span> ';
                 echo '<a href="' . get_edit_post_link($pid) . '" target="_blank">' . esc_html($p->post_title) . '</a>';
+                if ($p->post_status !== 'publish' && isset($status_labels[$p->post_status])) {
+                    echo ' <span style="color:#b32d2e;font-weight:600;font-size:11px;">' . esc_html(trim($status_labels[$p->post_status])) . '</span>';
+                }
                 echo ' <a href="#" class="kwwd-remove-post" data-id="' . esc_attr($pid) . '" style="color:#dc3232;margin-left:5px;text-decoration:none;" title="Remove from series">[x]</a>';
                 echo '<input type="hidden" name="kwwd_series_posts[]" value="' . esc_attr($pid) . '" />';
                 echo '</li>';
@@ -760,7 +987,7 @@ final class KWWD_Series_Plugin {
     }
 
     public function add_post_series_meta_box() {
-        add_meta_box('kwwd_post_series_box', __('Series', 'kwwd-simple-series'), array($this, 'render_post_series_box'), array('post', 'page'), 'side', 'default');
+        add_meta_box('kwwd_post_series_box', __('Series', 'kwwd-simple-series'), array($this, 'render_post_series_box'), $this->get_supported_content_post_types(), 'side', 'default');
     }
 
     public function render_post_series_box($post) {
@@ -805,6 +1032,19 @@ final class KWWD_Series_Plugin {
         echo '</select></p>';
     }
 
+    public function apply_series_page_slug($data, $postarr) {
+        if (($data['post_type'] ?? '') !== $this->series_cpt) {
+            return $data;
+        }
+        if (isset($_POST['kwwd_series_page_slug']) && trim($_POST['kwwd_series_page_slug']) !== '') {
+            $slug = sanitize_title(wp_unslash($_POST['kwwd_series_page_slug']));
+            if ($slug !== '') {
+                $data['post_name'] = $slug;
+            }
+        }
+        return $data;
+    }
+
     public function save_series_meta($post_id, $post) {
         if ($post->post_type !== $this->series_cpt) return;
         if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
@@ -841,6 +1081,12 @@ final class KWWD_Series_Plugin {
                 $post_series[] = $post_id;
                 update_post_meta($p_id, '_kwwd_post_series_ids', array_values($post_series));
             }
+        }
+
+        // Record membership activity for the "Most Recently Updated" archive sort
+        $added_ids = array_diff($post_ids, $old_post_ids);
+        if (!empty($removed_ids) || !empty($added_ids)) {
+            $this->touch_series_activity($post_id);
         }
 
         // Save override setting
@@ -903,6 +1149,7 @@ final class KWWD_Series_Plugin {
                     } else {
                         update_post_meta($old_sid, $this->series_meta_key, array_values($series_posts));
                     }
+                    $this->touch_series_activity($old_sid);
                 }
             }
         }
@@ -914,6 +1161,7 @@ final class KWWD_Series_Plugin {
             if (!in_array($post_id, $series_posts)) {
                 $series_posts[] = $post_id;
                 update_post_meta($new_sid, $this->series_meta_key, array_values($series_posts));
+                $this->touch_series_activity($new_sid);
             }
         }
 
@@ -954,6 +1202,19 @@ final class KWWD_Series_Plugin {
         wp_send_json_success('Order saved');
     }
 
+    public function ajax_update_archive_order() {
+        check_ajax_referer('kwwd_series_update_order', 'nonce');
+        if (!current_user_can('edit_posts')) wp_send_json_error('Unauthorized');
+
+        $series_order = isset($_POST['series_order']) ? $_POST['series_order'] : array();
+        $order_array = array();
+        foreach ($series_order as $index => $series_id) {
+            $order_array[intval($series_id)] = intval($index);
+        }
+        update_option('kwwd_series_archive_order', $order_array);
+        wp_send_json_success('Order saved');
+    }
+
     public function ajax_create_series() {
         check_ajax_referer('kwwd_series_create', 'nonce');
         if (!current_user_can('publish_posts')) wp_send_json_error(__('You are not allowed to create series.', 'kwwd-simple-series'));
@@ -991,7 +1252,7 @@ final class KWWD_Series_Plugin {
     }
 
     public function display_series_on_content($content) {
-        if (!is_singular(array('post', 'page'))) return $content;
+        if (!is_singular($this->get_supported_content_post_types())) return $content;
 
         $post_id = get_queried_object_id();
         if (!$post_id) return $content;
@@ -1047,6 +1308,7 @@ final class KWWD_Series_Plugin {
         if (!$series_post) return '';
 
         $series_post_ids = $this->get_ordered_series_post_ids($series_id);
+        $series_post_ids = $this->filter_published_post_ids($series_post_ids);
         if (empty($series_post_ids)) return '';
 
         $override = get_post_meta($series_id, '_kwwd_series_override', true);
@@ -1182,20 +1444,188 @@ final class KWWD_Series_Plugin {
         return $ids;
     }
 
-    private function get_series_image_html($series_id, $size, $allow_fallback) {
+    private function filter_published_post_ids($post_ids) {
+        $published = array();
+        foreach ($post_ids as $pid) {
+            if (get_post_status($pid) === 'publish') {
+                $published[] = $pid;
+            }
+        }
+        return $published;
+    }
+
+    private function get_ordered_series_ids($series_ids) {
+        $ordered = get_option('kwwd_series_archive_order', array());
+        if (!is_array($ordered)) $ordered = array();
+        usort($series_ids, function($a, $b) use ($ordered) {
+            $order_a = isset($ordered[$a]) ? $ordered[$a] : 9999;
+            $order_b = isset($ordered[$b]) ? $ordered[$b] : 9999;
+            if ($order_a !== $order_b) {
+                return $order_a - $order_b;
+            }
+            return strcasecmp(get_the_title($a), get_the_title($b));
+        });
+        return $series_ids;
+    }
+
+    private function touch_series_activity($series_id) {
+        if (!$series_id || get_post_type($series_id) !== $this->series_cpt) return;
+        update_post_meta($series_id, '_kwwd_series_last_activity', time());
+    }
+
+    private function get_registered_image_size_options() {
+        $options = array();
+        foreach (wp_get_registered_image_subsizes() as $name => $data) {
+            if (!empty($data['crop'])) continue;
+            $label = ucwords(str_replace(array('_', '-'), ' ', $name));
+            if (!empty($data['width']) && !empty($data['height'])) {
+                $label .= ' (' . intval($data['width']) . ' × ' . intval($data['height']) . ')';
+            } elseif (!empty($data['width'])) {
+                $label .= ' (width ' . intval($data['width']) . ')';
+            }
+            $options[$name] = $label;
+        }
+        $options['full'] = __('Full Size (original)', 'kwwd-simple-series');
+        return $options;
+    }
+
+    private function get_registered_image_size_names() {
+        $names = array_keys(wp_get_registered_image_subsizes());
+        $names[] = 'full';
+        return $names;
+    }
+
+    private function is_valid_image_size($size) {
+        return in_array((string) $size, $this->get_registered_image_size_names(), true);
+    }
+
+    private function is_cropped_image_size($size) {
+        if ($size === '' || $size === 'full') return false;
+        $sizes = wp_get_registered_image_subsizes();
+        return isset($sizes[$size]) && !empty($sizes[$size]['crop']);
+    }
+
+    private function get_setting_image_size($options, $key, $default) {
+        $size = (isset($options[$key]) && $options[$key] !== '') ? $options[$key] : $default;
+        if (!$this->is_valid_image_size($size) || $this->is_cropped_image_size($size)) return $default;
+        return $size;
+    }
+
+    private function get_setting_dimension($options, $key, $default = 0) {
+        $value = (isset($options[$key]) && $options[$key] !== '') ? $options[$key] : $default;
+        return intval($value);
+    }
+
+    private function get_saved_image_size($key, $default) {
+        $size = isset($_POST[$key]) ? sanitize_key(wp_unslash($_POST[$key])) : '';
+        if (!$this->is_valid_image_size($size) || $this->is_cropped_image_size($size)) return $default;
+        return $size;
+    }
+
+    private function get_saved_dimension($key) {
+        if (!isset($_POST[$key]) || $_POST[$key] === '') return '';
+        $value = intval($_POST[$key]);
+        return ($value > 0) ? strval($value) : '';
+    }
+
+    private function get_saved_archive_sort_value() {
+        $possible_values = array('manual', 'name_asc', 'name_desc', 'date_asc', 'date_desc', 'modified');
+        $value = isset($_POST['archive_sort_by']) ? sanitize_key(wp_unslash($_POST['archive_sort_by'])) : '';
+        return in_array($value, $possible_values, true) ? $value : 'manual';
+    }
+
+    private function get_available_content_post_types() {
+        $types = get_post_types(array('public' => true), 'names');
+        $excluded = array($this->series_cpt, 'attachment', 'revision', 'nav_menu_item', 'custom_css', 'customize_changeset', 'oembed_cache', 'user_request', 'wp_block', 'wp_template', 'wp_template_part', 'wp_navigation', 'wp_global_styles', 'wp_font_family', 'wp_font_face', 'wp_pattern', 'wp_pattern_category', 'wp_scheduled_action', 'wp_theme', 'wp_icon', 'wp_bundle');
+        return array_values(array_diff($types, $excluded));
+    }
+
+    public function get_supported_content_post_types() {
+        $options = get_option('kwwd_series_default_settings', array());
+        $saved = isset($options['supported_content_types']) ? (array) $options['supported_content_types'] : array();
+        if (empty($saved)) {
+            $saved = array('post', 'page');
+        }
+        $available = $this->get_available_content_post_types();
+        $supported = array();
+        foreach ($available as $type) {
+            if (in_array($type, $saved, true)) {
+                $supported[] = $type;
+            }
+        }
+        if (!in_array('post', $supported, true)) array_unshift($supported, 'post');
+        return $supported;
+    }
+
+    private function get_saved_supported_content_types() {
+        $available = $this->get_available_content_post_types();
+        $submitted = isset($_POST['supported_content_types']) ? (array) $_POST['supported_content_types'] : array();
+        $submitted = array_map('sanitize_key', $submitted);
+        $types = array('post');
+        foreach ($available as $type) {
+            if (in_array($type, $submitted, true)) {
+                $types[] = $type;
+            }
+        }
+        return array_values(array_unique($types));
+    }
+
+    private function render_image_size_fields($prefix, $current_size, $width, $height, $default_width) {
+        echo '<tr><th>' . esc_html__('Image Size', 'kwwd-simple-series') . '</th><td><select name="' . esc_attr($prefix . '_image_size') . '">';
+        $sizes = wp_get_registered_image_subsizes();
+        foreach ($this->get_registered_image_size_options() as $name => $label) {
+            $data_w = 0;
+            if (isset($sizes[$name]) && !empty($sizes[$name]['width'])) {
+                $data_w = intval($sizes[$name]['width']);
+            }
+            echo '<option value="' . esc_attr($name) . '" ' . selected($current_size, $name, false) . ' data-width="' . esc_attr($data_w) . '">' . esc_html($label) . '</option>';
+        }
+        echo '</select></td></tr>';
+        echo '<tr><th>' . esc_html__('Custom Dimensions (px)', 'kwwd-simple-series') . '</th><td>';
+        echo '<input type="number" name="' . esc_attr($prefix . '_image_width') . '" value="' . esc_attr($width ? $width : '') . '" min="0" step="1" style="width:80px;" /> ' . esc_html__('Width', 'kwwd-simple-series');
+        echo ' &nbsp; ';
+        echo '<input type="number" name="' . esc_attr($prefix . '_image_height') . '" value="' . esc_attr($height ? $height : '') . '" min="0" step="1" style="width:80px;" /> ' . esc_html__('Height', 'kwwd-simple-series');
+        echo '<p class="description" style="margin-top:4px;">' . sprintf(esc_html__('Default: %1$spx wide, height automatic. Choosing an Image Size fills the width here and leaves the height automatic so the image keeps its natural proportions. Custom width/height override the default; if both are set the image is cropped to fill the box.', 'kwwd-simple-series'), intval($default_width)) . '</p>';
+        echo '</td></tr>';
+    }
+
+    private function get_series_thumbnail_html($post_id, $size, $width = 0, $height = 0) {
+        $attr = array();
+        $thumb_id = get_post_thumbnail_id($post_id);
+        if ($thumb_id) {
+            $alt = trim((string) get_post_meta($thumb_id, '_wp_attachment_image_alt', true));
+            if ($alt === '') {
+                $attr['alt'] = get_the_title($post_id);
+            }
+        }
+        if ($width > 0 || $height > 0) {
+            $style = array('max-width:100%');
+            if ($width > 0) $style[] = 'width:' . intval($width) . 'px';
+            if ($height > 0) {
+                $style[] = 'height:' . intval($height) . 'px';
+                if ($width > 0) $style[] = 'object-fit:cover';
+            } else {
+                $style[] = 'height:auto';
+            }
+            $attr['style'] = implode(';', $style);
+        }
+        return get_the_post_thumbnail($post_id, $size, $attr);
+    }
+
+    private function get_series_image_html($series_id, $size, $allow_fallback, $width = 0, $height = 0) {
         if (has_post_thumbnail($series_id)) {
-            return '<div class="kwwd-series-image">' . get_the_post_thumbnail($series_id, $size) . '</div>';
+            return '<div class="kwwd-series-image">' . $this->get_series_thumbnail_html($series_id, $size, $width, $height) . '</div>';
         }
         if (!$allow_fallback) return '';
-        foreach ($this->get_ordered_series_post_ids($series_id) as $pid) {
+        foreach ($this->filter_published_post_ids($this->get_ordered_series_post_ids($series_id)) as $pid) {
             if (has_post_thumbnail($pid)) {
-                return '<div class="kwwd-series-image">' . get_the_post_thumbnail($pid, $size) . '</div>';
+                return '<div class="kwwd-series-image">' . $this->get_series_thumbnail_html($pid, $size, $width, $height) . '</div>';
             }
         }
         return '';
     }
 
-    public function get_series_page_html($series_id) {
+    public function get_series_page_html($series_id, $include_title = true) {
         $series_post = get_post($series_id);
         if (!$series_post) return '';
 
@@ -1215,7 +1645,9 @@ final class KWWD_Series_Plugin {
             $html .= $this->get_series_image_html($series_id, 'large', ($fallback === '1'));
         }
 
-        $html .= '<h1 class="kwwd-series-page-title">' . esc_html($series_post->post_title) . '</h1>';
+        if ($include_title) {
+            $html .= '<h1 class="kwwd-series-page-title">' . esc_html($series_post->post_title) . '</h1>';
+        }
 
         $show_desc = isset($page_options['series_page_show_description']) ? $page_options['series_page_show_description'] : '1';
         if ($show_desc === '1') {
@@ -1226,32 +1658,41 @@ final class KWWD_Series_Plugin {
         }
 
         $post_ids = $this->get_ordered_series_post_ids($series_id);
+        $post_ids = $this->filter_published_post_ids($post_ids);
         $layout = isset($page_options['series_page_layout']) ? $page_options['series_page_layout'] : 'list';
         $show_post_image = isset($page_options['series_page_show_post_image']) ? $page_options['series_page_show_post_image'] : '1';
 
         if (empty($post_ids)) {
             $html .= '<p class="kwwd-series-page-empty">' . esc_html__('No posts in this series yet.', 'kwwd-simple-series') . '</p>';
         } elseif ($layout === 'grid') {
-            $html .= '<div class="kwwd-series-page-grid">';
+            $grid_size = $this->get_setting_image_size($page_options, 'series_page_grid_image_size', 'medium_large');
+            $grid_width = $this->get_setting_dimension($page_options, 'series_page_grid_image_width', 300);
+            $grid_style = ($grid_width > 0) ? ' style="width:' . intval($grid_width) . 'px"' : '';
+            $html .= '<div class="kwwd-series-page-grid">' . "\n";
             foreach ($post_ids as $pid) {
                 $p = get_post($pid);
                 if (!$p) continue;
-                $card = '<a class="kwwd-series-grid-card" href="' . esc_url(get_permalink($pid)) . '">';
+                $post_url = get_permalink($pid);
+                $card = "\t" . '<article class="kwwd-series-grid-card"' . $grid_style . '>' . "\n";
                 if ($show_post_image === '1' && has_post_thumbnail($pid)) {
-                    $card .= get_the_post_thumbnail($pid, 'medium_large');
+                    $card .= "\t\t" . '<a class="kwwd-series-grid-link" href="' . esc_url($post_url) . '">' . $this->get_series_thumbnail_html($pid, $grid_size) . '</a>' . "\n";
                 }
-                $card .= '<span class="kwwd-series-grid-title">' . esc_html($p->post_title) . '</span>';
-                $html .= $card . '</a>';
+                $card .= "\t\t" . '<a class="kwwd-series-grid-title" href="' . esc_url($post_url) . '">' . esc_html($p->post_title) . '</a>' . "\n";
+                $card .= "\t" . '</article>';
+                $html .= $card . "\n";
             }
             $html .= '</div>';
         } else {
+            $list_size = $this->get_setting_image_size($page_options, 'series_page_list_image_size', 'medium');
+            $list_width = $this->get_setting_dimension($page_options, 'series_page_list_image_width', 150);
+            $list_height = $this->get_setting_dimension($page_options, 'series_page_list_image_height');
             $html .= '<ol class="kwwd-series-page-list">';
             foreach ($post_ids as $pid) {
                 $p = get_post($pid);
                 if (!$p) continue;
                 $html .= '<li>';
                 if ($show_post_image === '1' && has_post_thumbnail($pid)) {
-                    $html .= '<span class="kwwd-series-list-thumb">' . get_the_post_thumbnail($pid, 'thumbnail') . '</span>';
+                    $html .= '<span class="kwwd-series-list-thumb">' . $this->get_series_thumbnail_html($pid, $list_size, $list_width, $list_height) . '</span>';
                 }
                 $html .= '<a href="' . esc_url(get_permalink($pid)) . '">' . esc_html($p->post_title) . '</a>';
                 $html .= '</li>';
@@ -1283,9 +1724,47 @@ final class KWWD_Series_Plugin {
             }
         }
 
+        $sort_by = isset($archive_options['archive_sort_by']) ? $archive_options['archive_sort_by'] : 'manual';
+        $series_rank = get_option('kwwd_series_archive_order', array());
+        if (!is_array($series_rank)) $series_rank = array();
+
+        usort($items, function($a, $b) use ($sort_by, $series_rank) {
+            switch ($sort_by) {
+                case 'name_asc':
+                    return strcasecmp($a['series']->post_title, $b['series']->post_title);
+                case 'name_desc':
+                    return strcasecmp($b['series']->post_title, $a['series']->post_title);
+                case 'date_asc':
+                    return strtotime($a['series']->post_date) - strtotime($b['series']->post_date);
+                case 'date_desc':
+                    return strtotime($b['series']->post_date) - strtotime($a['series']->post_date);
+                case 'modified':
+                    $act_a = (int) get_post_meta($a['series']->ID, '_kwwd_series_last_activity', true);
+                    $act_b = (int) get_post_meta($b['series']->ID, '_kwwd_series_last_activity', true);
+                    if ($act_a !== $act_b) {
+                        return $act_b - $act_a;
+                    }
+                    return strtotime($b['series']->post_date) - strtotime($a['series']->post_date);
+                case 'manual':
+                default:
+                    $id_a = $a['series']->ID;
+                    $id_b = $b['series']->ID;
+                    $rank_a = isset($series_rank[$id_a]) ? (int) $series_rank[$id_a] : 9999;
+                    $rank_b = isset($series_rank[$id_b]) ? (int) $series_rank[$id_b] : 9999;
+                    if ($rank_a !== $rank_b) {
+                        return $rank_a - $rank_b;
+                    }
+                    return strcasecmp($a['series']->post_title, $b['series']->post_title);
+            }
+        });
+
         if (empty($items)) {
             return '<p class="kwwd-series-archive-empty">' . esc_html__('No series yet.', 'kwwd-simple-series') . '</p>';
         }
+
+        $list_size = $this->get_setting_image_size($archive_options, 'archive_list_image_size', 'medium');
+        $list_width = $this->get_setting_dimension($archive_options, 'archive_list_image_width', 150);
+        $list_height = $this->get_setting_dimension($archive_options, 'archive_list_image_height');
 
         if ($layout === 'list') {
             $html = '<div class="kwwd-series-archive-list">';
@@ -1294,10 +1773,10 @@ final class KWWD_Series_Plugin {
                 $page_url = get_permalink($series->ID);
                 $card = '<article class="kwwd-series-list-card">';
                 if ($show_image === '1') {
-                    $card .= '<div class="kwwd-series-list-card-image">' . $this->get_series_image_html($series->ID, 'medium', ($fallback === '1')) . '</div>';
+                    $card .= '<div class="kwwd-series-list-card-image">' . $this->get_series_image_html($series->ID, $list_size, ($fallback === '1'), $list_width, $list_height) . '</div>';
                 }
                 $card .= '<div class="kwwd-series-list-card-body">';
-                $card .= '<h2 class="kwwd-series-card-title">' . esc_html($series->post_title) . '</h2>';
+                $card .= '<h2 class="kwwd-series-card-title"><a href="' . esc_url($page_url) . '">' . esc_html($series->post_title) . '</a></h2>';
                 if ($show_desc === '1') {
                     $desc = get_post_meta($series->ID, '_kwwd_series_description', true);
                     if ($desc) {
@@ -1324,15 +1803,19 @@ final class KWWD_Series_Plugin {
             return $html;
         }
 
+        $grid_size = $this->get_setting_image_size($archive_options, 'archive_grid_image_size', 'medium');
+        $grid_width = $this->get_setting_dimension($archive_options, 'archive_grid_image_width', 300);
+        $grid_style = ($grid_width > 0) ? ' style="width:' . intval($grid_width) . 'px"' : '';
+
         $html = '<div class="kwwd-series-archive-grid">';
         foreach ($items as $item) {
             $series = $item['series'];
             $page_url = get_permalink($series->ID);
-            $card = '<article class="kwwd-series-card">';
+            $card = '<article class="kwwd-series-card"' . $grid_style . '>';
             if ($show_image === '1') {
-                $card .= $this->get_series_image_html($series->ID, 'medium', ($fallback === '1'));
+                $card .= $this->get_series_image_html($series->ID, $grid_size, ($fallback === '1'));
             }
-            $card .= '<h2 class="kwwd-series-card-title">' . esc_html($series->post_title) . '</h2>';
+            $card .= '<h2 class="kwwd-series-card-title"><a href="' . esc_url($page_url) . '">' . esc_html($series->post_title) . '</a></h2>';
             if ($show_count === '1') {
                 $card .= '<span class="kwwd-series-card-count">' . sprintf(esc_html(_n('%s post', '%s posts', $item['count'], 'kwwd-simple-series')), $item['count']) . '</span>';
             }
@@ -1366,7 +1849,7 @@ final class KWWD_Series_Plugin {
     }
 
     public function print_collapsible_script() {
-        if (!is_singular(array('post', 'page'))) return;
+        if (!is_singular($this->get_supported_content_post_types())) return;
         ?>
         <script>
         (function(){

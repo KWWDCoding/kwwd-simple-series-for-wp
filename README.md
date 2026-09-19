@@ -10,6 +10,8 @@
 
 - **Series Management** - Create unlimited series using the dedicated Series post type
 - **Multi-Post Support** - Add posts and pages to multiple series (great for cross-topics) — for example a post on "Spider-man" might be in a "Marvel" series *and* a "Superhero" series
+- **Custom Content Types** - Enable custom post types (Downloads, products, etc.) in the settings so they can be added to series and show their series box on single pages
+- **Scheduling Friendly** - Add draft, pending or scheduled items to a series; they stay hidden on the frontend until published
 - **Drag-to-Reorder** - Easily reorder posts within a series
 - **Customizable Styling** - Extensive styling options:
   - Background color and opacity
@@ -52,8 +54,8 @@
 
 Two ways to assign posts:
 
-1. **From Series Edit Screen** - Use the search/filter box to add posts directly
-2. **From Post/Page Edit Screen** - Check the series you want in the Series meta box
+1. **From Series Edit Screen** - Use the search/filter box to add posts, pages or enabled custom post types directly (including items still in Draft, Pending or Scheduled status)
+2. **From Post/Page/Custom Post Type Edit Screen** - Check the series you want in the Series meta box (the box appears on posts, pages, and any custom post type enabled in Settings > Series Page Settings)
 
 You can also create a brand-new series on the fly from the post/page edit screen via the **Add New Series** box in the Series meta box - it's title-only and immediately assigned to the current post. Configure its description and display settings later from the main series edit page.
 
@@ -72,7 +74,7 @@ You can display multiple series per page if you wish.
 
 ## Default Settings
 
-Go to **Series > Settings** to configure global defaults. The settings page has three tabs:
+Go to **Series > Settings** to configure global defaults. The settings page has four tabs:
 
 **Default Display Settings**
 - Display Position
@@ -89,6 +91,7 @@ Go to **Series > Settings** to configure global defaults. The settings page has 
 - Start Collapsed
 
 **Series Page Settings**
+- Supported Content Types
 - Series Page URL Slug
 - Show Series Featured Image
 - Fallback to First Post's Featured Image
@@ -103,11 +106,16 @@ Go to **Series > Settings** to configure global defaults. The settings page has 
 - Show Series Description
 - Card Link Behavior (Link to series page / Expandable list)
 
+**General Settings**
+- Remove plugin data on uninstall (off by default)
+- Also delete series images on uninstall (off by default, only available when the above is enabled)
+
 ## Series Pages & Archive
 
 Each published series gets a dedicated page at `/series/{series-slug}/` and all series appear on the `/series/` index. To get the URLs working, visit **Settings > Permalinks** and click **Save** once after updating the plugin.
 
 ### Series Page Settings tab
+- **Supported Content Types** - Which public content types can be added to a series. Posts are always on; Pages and any custom post type (e.g. Downloads) are enabled with a checkbox - uncheck a type to leave it out of the series picker and its Assign to Series box. Content that is still in Draft, Pending or Scheduled status can be added to a series but is hidden on the frontend (series box, series page and archive) until it is published; the series editor marks such items with "(Draft)", "(Pending)" or "(Scheduled)".
 - Show Series Featured Image (+ fallback to the first post image that has one)
 - Display Series Posts As (List or Grid)
 - Display Post Featured Image
@@ -119,9 +127,18 @@ Each published series gets a dedicated page at `/series/{series-slug}/` and all 
 - Show Post Count
 - Show Series Description
 - Display Archive As (Grid or List)
+- **Series Sort Order** - How series are ordered on the archive page: Manual Order (drag and drop), Series Name (A-Z or Z-A), Date Series Created (oldest or newest first), or Most Recently Updated (series move up when posts are added to or removed from them)
 - Card Link Behavior (Link to series page, or Expandable list shown inline)
 
 Individual series can override the default display settings in their Display Settings. The "Series Page Link" can also be overridden per-post/page (Default / Show / Hide) in the Series meta box. Series featured images can be set from the series edit screen.
+
+Every series also has a **Series Page URL Slug** box on its edit screen. This controls the slug of that series' page URL (e.g. `/series/star-trek-snw/`). Leave it blank to keep the auto-generated slug based on the series title.
+
+You can also control the order series appear on the `/series/` archive. Go to **Series > All Series** and drag the handle on the left of each row to reorder, then make sure **Series Sort Order** is set to **Manual Order** in the archive settings. The order applies to both the grid and list archive layouts, and is saved automatically. Series you have not dragged yet are appended at the end in alphabetical order. Alternatively, set the sort order to Series Name, Date Created, or Most Recently Updated to have the archive order itself automatically.
+
+## Uninstall
+
+Deleting the plugin never removes your data by default. If you ever want a full clean removal, go to **Series > Settings > General Settings** and enable **"Remove all plugin data when the plugin is deleted"**, then delete the plugin. This deletes all series, their settings and any series assignments on posts. You can also tick **"Also delete series images"**, which additionally removes featured images set on series pages (but only those that are no longer used as a featured image by any other post).
 
 ## Credits
 

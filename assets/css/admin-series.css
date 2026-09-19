@@ -183,6 +183,33 @@
     background: #f6f7f7;
 }
 
+.kwwd-series-order-table tbody tr {
+    cursor: grab;
+}
+
+.kwwd-series-order-table tbody tr.ui-sortable-helper {
+    background: #fff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.kwwd-series-order-table tbody tr.kwwd-series-order-placeholder {
+    background: #f0f0f1;
+    visibility: visible !important;
+}
+
+.kwwd-series-order-table .kwwd-series-order-handle-col {
+    width: 40px;
+}
+
+.kwwd-series-order-table .kwwd-series-order-handle {
+    color: #787c82;
+    cursor: grab;
+}
+
+.kwwd-series-order-table .kwwd-series-order-handle:hover {
+    color: #1d2327;
+}
+
 .kwwd-series-list-table .row-title {
     font-weight: 600;
 }

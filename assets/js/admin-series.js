@@ -7,6 +7,7 @@
     var SeriesAdmin = {
         init: function() {
             this.initSortable();
+            this.initArchiveSortable();
             this.initAddSeries();
         },
 
@@ -25,6 +26,52 @@
                         SeriesAdmin.saveOrder(seriesId, $list);
                     }
                 });
+            });
+        },
+
+        initArchiveSortable: function() {
+            var $list = $('#kwwd-series-order-list');
+            if (!$list.length) return;
+
+            $list.sortable({
+                handle: '.kwwd-series-order-handle',
+                placeholder: 'kwwd-series-order-placeholder',
+                axis: 'y',
+                update: function() {
+                    SeriesAdmin.saveArchiveOrder($list);
+                }
+            });
+        },
+
+        saveArchiveOrder: function($list) {
+            var seriesOrder = [];
+            $list.find('tr').each(function() {
+                seriesOrder.push($(this).data('series-id'));
+            });
+
+            $.ajax({
+                url: kwwdSeriesAdmin.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'kwwd_series_update_archive_order',
+                    series_order: seriesOrder,
+                    nonce: kwwdSeriesAdmin.nonce
+                },
+                beforeSend: function() {
+                    $list.css('opacity', '0.5');
+                },
+                success: function(response) {
+                    $list.css('opacity', '1');
+                    if (response.success) {
+                        SeriesAdmin.showNotice(kwwdSeriesAdmin.strings.saved, 'success');
+                    } else {
+                        SeriesAdmin.showNotice('Error saving order', 'error');
+                    }
+                },
+                error: function() {
+                    $list.css('opacity', '1');
+                    SeriesAdmin.showNotice('Error saving order', 'error');
+                }
             });
         },
 

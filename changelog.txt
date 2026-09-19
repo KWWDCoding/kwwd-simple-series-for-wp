@@ -1,8 +1,122 @@
 CHANGELOG
 =========
 
-v1.5.6 (latest)
+v1.5.21 (latest)
+----------------
+Added: Optional removal of series images on uninstall
+- New "Also delete series images" checkbox in Settings > General Settings (only available when "Remove all plugin data when the plugin is deleted" is enabled) - off by default
+- When enabled, uninstalling the plugin also deletes featured images that were set on series pages, but only when the image is no longer used as a featured image by any other post; images still referenced elsewhere are kept
+
+v1.5.20
+----------------
+Added: General Settings tab with optional data removal on uninstall
+- New "General Settings" tab (last tab on the Series Settings page) with a "Remove all plugin data when the plugin is deleted" checkbox, unchecked by default
+- Added an uninstall script: when the checkbox is enabled, deleting the plugin deletes all series, their settings and any series assignments on posts
+- With the checkbox left unchecked (the default), all series data is preserved if the plugin is ever reinstalled
+
+v1.5.19
+----------------
+Changed: Pages are now optional in the Supported Content Types section (only Posts are always on). Uncheck Pages or a custom post type to remove it from the series content picker and from its Assign to Series box
+
+v1.5.18
+----------------
+Fixed: Pages are listed again in the Supported Content Types checkboxes (they were left out because WordPress does not flag Pages as publicly queryable)
+Fixed: Series Page Settings tab now shows clear section headers - "Featured Image" above the Show Series Featured Image option and "Posts Layout" above the Display Series Posts As option - matching the existing Grid Image / List Image header style
+
+v1.5.17
+----------------
+----------------
+Added: Support for custom post types and unpublished content in series
+- New "Supported Content Types" section at the top of Settings > Series Page Settings lets you choose which public content types can be added to a series (Posts are always on; Pages and custom post types such as Downloads are enabled with a checkbox)
+- Enabled custom post types now show an "Assign to Series" box on their edit screens and display their series box on single pages, like posts and pages
+- Posts, Pages and enabled custom post types that are still in Draft, Pending or Scheduled status can now be added to a series from the series editor
+- Items that are not published yet are hidden from the frontend (series list box, series page and archive) until they are published; the series editor marks them with "(Draft)", "(Pending)" or "(Scheduled)"
+- The content picker in the series editor now searches across all supported content types instead of posts and pages only
+
+v1.5.16
+----------------
+Added: Series Sort Order setting for the archive page
+- New "Series Sort Order" dropdown in Settings > Series Archive Settings lets you order the series on the archive page by:
+  - Manual Order (drag and drop on the Series > All Series screen)
+  - Series Name (A-Z or Z-A)
+  - Date Series Created (oldest or newest first)
+  - Most Recently Updated (series move up when posts are added to or removed from them)
+- For "Most Recently Updated", the series is considered updated when posts are added/removed from it (from either the post editor or the series editor); editing a series description or display settings alone does not count
+
+v1.5.15
+----------------
+Added: Drag-and-drop ordering of series on the series archive page
+- The "Article Series" admin page (Series > All Series) now lets you drag series into the order you want them to appear on the series archive page
+- Drag the handle on the left of each series row to reorder; the new order is saved automatically
+- Applies to both the grid and list layouts on the archive page
+- Any series not yet dragged appear at the end (in alphabetical order), so newly added series sit at the bottom until you reposition them
+
+v1.5.14
+----------------
+Added: Per-series page URL slug
+- Each series now has its own "Series Page URL Slug" box on the series edit screen, so you can give an individual series a custom URL slug instead of the auto-generated one based on the title
+- Example: /series/star-trek-strange-new-worlds/ can become /series/star-trek-snw/
+- Leave the field blank to keep the auto-generated slug from the series title
+- Saving the series updates the series page URL; existing links to the old URL will need updating
+- WordPress still prevents duplicate slugs by appending a suffix (e.g. -2) automatically
+
+v1.5.13
+----------------
+Added: Series archive cards - series titles are now clickable links to the series page (kept the "View Series Page" button too). Consistent with other clickable titles around the site.
+
+v1.5.12
+----------------
+Fixed: Series archive (main page) grid layout
+- Cards now size to the configured image width (e.g. 300px) instead of stretching to fill the column, so the grid matches the featured image width with no surrounding whitespace
+- The grid is now a wrapping flex layout like the single series page grid, with cards auto-sized to the image width
+- Added bottom margin after the archive grid so it no longer butts up against the content below
+- Reduced the series title size on the cards (1.2em down to 1em)
+- The "View Series Page" button no longer inherits the theme's pink underline/border - it keeps its own border and neutral text colour
+- Removed the stray paragraph margins around the post count badge and button (wpautop wrappers)
+- Cards go full width on small screens (<= 600px)
+
+v1.5.11
+----------------
+Fixed: Single series page list layout
+- Thumbnails now always render at the configured width (e.g. 200px); long post titles no longer squeeze the poster, they wrap in the remaining space instead
+- List titles are styled black, slightly smaller, and no longer inherit the theme's pink link colour or the pink bottom "border" line underneath the text
+- Each post row is now a bordered card (border, rounded corners, white background, hover shadow) to differentiate the entries
+
+v1.5.10
+----------------
+Fixed: Single series page grid polish
+- Removed the extra vertical gaps in each grid card: WordPress's wpautop was converting the newlines inside the link tags to <br /> tags, stacking space around the poster; the image and title links are now emitted on single lines so wpautop leaves them alone
+- Removed the pink link underline that appeared between the poster and the title (the theme's .entry a box-shadow) from the image link
+- Grid card titles are slightly smaller, wrap long titles cleanly, and posters missing an alt text now fall back to the post title for accessibility
+- Grid container gets a bottom margin so the last row no longer touches the content below it
+
+v1.5.9
 ---------------
+Fixed: Single series page grid layout
+- Grid cards are no longer a single <a> wrapper; each post is an <article> card with the poster image and the post title as separate links, so card borders show correctly
+- Theme link styling (wkrn .entry a) can no longer overwrite the card border or paint its pink underline inside the grid
+- Grid now auto-flows: cards size to the configured poster width (e.g. 150px = more per row, 300px = fewer) and wrap to fill each row instead of being pinned to two fixed columns; image width (Height) no longer applies to the single-series grid
+- Grid output is now emitted as properly indented, multi-line HTML for easier debugging
+
+v1.5.8
+---------------
+Fixed: Series post list thumbnails were hard-cropped to squares
+- Series page list images default to the proportional "medium" size instead of the square "thumbnail" crop, so the full poster shows at the chosen width (150px) with its natural height
+- Hard-cropped sizes (e.g. thumbnail, post-thumbnail) are now excluded from the "Image Size" dropdown; only proportional sizes and Full Size are offered, so images stay proportional
+- The "Image Size" dropdown now prefills the Width field only (height stays automatic); existing saved values that point at a cropped size automatically fall back to the proportional default
+- Applies to the grid/list controls on the single series page and the archive page (custom width + height both set still crops on purpose)
+
+v1.5.7
+---------------
+Added: Configurable card image sizes
+- Series Page Settings and Series Archive Settings each have Grid and List image controls
+- Default display size: 300px wide (grid), 150px wide (list), height proportional
+- "Image Size" dropdown acts as a preset: it lists every registered WordPress/theme/plugin thumbnail size and fills the Width/Height fields (cropped sizes fill both)
+- Custom Width/Height (px) override the default or preset; when both are set the image is cropped to fill the box (object-fit: cover)
+- Images are capped at 100% of their container so large sizes never overflow cards
+
+v1.5.6
+----------------
 - Renamed the main plugin file to match folder structure to match WordPress naming conventions
 - Added version declaration to defined variables
 
