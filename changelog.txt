@@ -1,29 +1,29 @@
 CHANGELOG
 =========
 
-v1.5.21 (latest)
+v2.0.11 (latest)
 ----------------
 Added: Optional removal of series images on uninstall
 - New "Also delete series images" checkbox in Settings > General Settings (only available when "Remove all plugin data when the plugin is deleted" is enabled) - off by default
 - When enabled, uninstalling the plugin also deletes featured images that were set on series pages, but only when the image is no longer used as a featured image by any other post; images still referenced elsewhere are kept
 
-v1.5.20
+v2.0.10
 ----------------
 Added: General Settings tab with optional data removal on uninstall
 - New "General Settings" tab (last tab on the Series Settings page) with a "Remove all plugin data when the plugin is deleted" checkbox, unchecked by default
 - Added an uninstall script: when the checkbox is enabled, deleting the plugin deletes all series, their settings and any series assignments on posts
 - With the checkbox left unchecked (the default), all series data is preserved if the plugin is ever reinstalled
 
-v1.5.19
+v2.0.9
 ----------------
 Changed: Pages are now optional in the Supported Content Types section (only Posts are always on). Uncheck Pages or a custom post type to remove it from the series content picker and from its Assign to Series box
 
-v1.5.18
+v2.0.8
 ----------------
 Fixed: Pages are listed again in the Supported Content Types checkboxes (they were left out because WordPress does not flag Pages as publicly queryable)
 Fixed: Series Page Settings tab now shows clear section headers - "Featured Image" above the Show Series Featured Image option and "Posts Layout" above the Display Series Posts As option - matching the existing Grid Image / List Image header style
 
-v1.5.17
+v2.0.7
 ----------------
 ----------------
 Added: Support for custom post types and unpublished content in series
@@ -33,7 +33,7 @@ Added: Support for custom post types and unpublished content in series
 - Items that are not published yet are hidden from the frontend (series list box, series page and archive) until they are published; the series editor marks them with "(Draft)", "(Pending)" or "(Scheduled)"
 - The content picker in the series editor now searches across all supported content types instead of posts and pages only
 
-v1.5.16
+v2.0.6
 ----------------
 Added: Series Sort Order setting for the archive page
 - New "Series Sort Order" dropdown in Settings > Series Archive Settings lets you order the series on the archive page by:
@@ -43,7 +43,7 @@ Added: Series Sort Order setting for the archive page
   - Most Recently Updated (series move up when posts are added to or removed from them)
 - For "Most Recently Updated", the series is considered updated when posts are added/removed from it (from either the post editor or the series editor); editing a series description or display settings alone does not count
 
-v1.5.15
+v2.0.5
 ----------------
 Added: Drag-and-drop ordering of series on the series archive page
 - The "Article Series" admin page (Series > All Series) now lets you drag series into the order you want them to appear on the series archive page
@@ -51,7 +51,7 @@ Added: Drag-and-drop ordering of series on the series archive page
 - Applies to both the grid and list layouts on the archive page
 - Any series not yet dragged appear at the end (in alphabetical order), so newly added series sit at the bottom until you reposition them
 
-v1.5.14
+v2.0.4
 ----------------
 Added: Per-series page URL slug
 - Each series now has its own "Series Page URL Slug" box on the series edit screen, so you can give an individual series a custom URL slug instead of the auto-generated one based on the title
@@ -60,11 +60,11 @@ Added: Per-series page URL slug
 - Saving the series updates the series page URL; existing links to the old URL will need updating
 - WordPress still prevents duplicate slugs by appending a suffix (e.g. -2) automatically
 
-v1.5.13
+v2.0.3
 ----------------
 Added: Series archive cards - series titles are now clickable links to the series page (kept the "View Series Page" button too). Consistent with other clickable titles around the site.
 
-v1.5.12
+v2.0.2
 ----------------
 Fixed: Series archive (main page) grid layout
 - Cards now size to the configured image width (e.g. 300px) instead of stretching to fill the column, so the grid matches the featured image width with no surrounding whitespace
@@ -75,14 +75,14 @@ Fixed: Series archive (main page) grid layout
 - Removed the stray paragraph margins around the post count badge and button (wpautop wrappers)
 - Cards go full width on small screens (<= 600px)
 
-v1.5.11
+v2.0.1
 ----------------
 Fixed: Single series page list layout
 - Thumbnails now always render at the configured width (e.g. 200px); long post titles no longer squeeze the poster, they wrap in the remaining space instead
 - List titles are styled black, slightly smaller, and no longer inherit the theme's pink link colour or the pink bottom "border" line underneath the text
 - Each post row is now a bordered card (border, rounded corners, white background, hover shadow) to differentiate the entries
 
-v1.5.10
+v2.0.0
 ----------------
 Fixed: Single series page grid polish
 - Removed the extra vertical gaps in each grid card: WordPress's wpautop was converting the newlines inside the link tags to <br /> tags, stacking space around the poster; the image and title links are now emitted on single lines so wpautop leaves them alone
